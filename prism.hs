@@ -2,11 +2,12 @@ module Main where
 import System.Exit (exitWith, ExitCode(..))
 import Data.List (transpose)
 import Data.KMeans (kmeans)
+import Numeric (showHex)
 import Codec.Picture (decodeImage,
                         Image,
                         DynamicImage (..),
                         PixelRGB8 (..) )
-import Codec.Picture.Types(pixelFold)
+import Codec.Picture.Types(pixelFold, convertImage, ColorSpaceConvertible)
 import System.IO (stdin)
 import Data.ByteString (hGetContents)
 
@@ -18,9 +19,12 @@ collapseToDoubleList lst x y (PixelRGB8 r g b) =
         in lst ++ [map (\ word -> fromIntegral word :: Double) words]
 
 convertImageToDoubleList :: DynamicImage -> [[Double]]
-convertImageToDoubleList img = 
-    case img of
-        ImageRGB8 i -> pixelFold collapseToDoubleList [] i
+convertImageToDoubleList img =
+    let c img = pixelFold collapseToDoubleList []  img
+        ci = convertImage
+    in case img of
+        ImageRGB8   i   -> c i
+        ImageYCbCr8 i   -> c (ci i :: Image PixelRGB8)
         _ -> [[0.0]]
 
 
@@ -37,7 +41,7 @@ avg :: [Double] -> Double
 avg a = (sum a) / (fromIntegral (length a) :: Double)
 
 
--- Functions for input and output
+-- Helper functions for input and output
 getColourSpaceName :: DynamicImage -> String
 getColourSpaceName img = case img of
     ImageY8 _       -> "ImageY8"
@@ -52,9 +56,19 @@ exitWithError :: String -> IO a
 exitWithError err = do putStrLn err
                        exitWith (ExitFailure 1)
 
+rgbToHexCode :: [Double] -> String
+rgbToHexCode channels = foldl (++) "#" hexes
+    where   intRGB = (map floor channels)
+            hexesShowS = map showHex intRGB
+            shortHexes = map (\ showS -> showS "") hexesShowS
+            hexes = map (\ x -> if length x < 2
+                                    then "0" ++ x
+                                    else x) shortHexes
+
+
 main :: IO()
 main = do
-    putStrLn "reading Image"
+    putStrLn "reading ImageRGB8e"
     imstream <- hGetContents stdin
     putStrLn "reading complete, passing to kmeans"
     either failure success (decodeImage imstream)
@@ -62,7 +76,8 @@ main = do
                 do  putStrLn $ "image colour space: " ++ getColourSpaceName img
                     let imgPixels = convertImageToDoubleList img
                         colours = buildTerminalColours imgPixels
-                    putStrLn $ show imgPixels
+                    putStrLn $ show colours
+                    putStrLn $ show $ map rgbToHexCode colours
             failure msg =
                 do  exitWithError $ "Error decoding image:\n" ++ msg
 
