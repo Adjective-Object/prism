@@ -1,9 +1,15 @@
-all: main test
+all: prism prism-vector test
 
 TEST_IMG="dock_tiny.jpg"
 
-main:	
+prism:	
 	ghc prism.hs
+
+prism-vector:	
+	ghc prism-vector.hs
 
 test:
 	cat $(TEST_IMG) | ./prism
+
+test-vector:
+	cat $(TEST_IMG) | ./prism-vector
