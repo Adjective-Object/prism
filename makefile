@@ -1,8 +1,8 @@
 all: main test
 
-TEST_IMG="stand_tiny.jpg"
+TEST_IMG="dock_tiny.jpg"
 
-main: 
+main:	
 	ghc prism.hs
 
 test:
