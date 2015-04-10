@@ -1,7 +1,7 @@
 module Main where
 import System.Exit (exitWith, ExitCode(..))
 
-import Data.List (transpose)
+import Data.List (transpose, foldl')
 import Data.KMeans (kmeansGen)
 
 import Numeric (showHex)
@@ -96,7 +96,7 @@ exitWithError err = do putStrLn err
                        exitWith (ExitFailure 1)
 
 rgbToHexCode :: [Double] -> String
-rgbToHexCode channels = foldl (++) "#" hexes
+rgbToHexCode channels = foldl' (++) "#" hexes
     where   intRGB = (map floor channels)
             hexesShowS = map showHex intRGB
             shortHexes = map (\ showS -> showS "") hexesShowS
@@ -120,19 +120,13 @@ convertToRGB :: [Double] -> [Double]
 convertToRGB [l, a, b] = let 
         lab  :: CIELAB Double
         lab = (CIELAB l a b)
-        rgb  :: RGB Integer
+        rgb  :: RGB Integer     
         rgb = toRGB lab
         RGB _r _g _b = rgb
     in map toDouble [_r, _g, _b]
 
-main :: IO()
-main = do
-    putStrLn "reading ImageRGB8e"
-    imstream <- hGetContents stdin
-    putStrLn "reading complete, passing to kmeans"
-    either failure success $! decodeImage imstream
-    where 
-        success img = do
+imgSuccess :: DynamicImage -> IO()
+imgSuccess img = do
             putStrLn $ "image colour space: " ++ getColourSpaceName img
             let imgPixelsRGB = convertImageToDoubleList img
                 imgPixelsLAB = map convertToLAB imgPixelsRGB
@@ -140,5 +134,13 @@ main = do
                 coloursRGB = map convertToRGB coloursLAB
             putStrLn $ show coloursRGB
             putStrLn $ show $ map rgbToHexCode coloursRGB
-        failure msg = do
+
+imgFailure :: String -> IO()
+imgFailure msg = do
             exitWithError $ "Error decoding image:\n" ++ msg
+
+main :: IO()
+main = do
+    putStrLn "reading image from stdin"
+    imstream <- hGetContents stdin
+    either imgFailure imgSuccess $! decodeImage imstream        

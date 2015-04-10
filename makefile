@@ -1,15 +1,17 @@
-all: prism prism-vector test
+all: prof
 
 TEST_IMG="dock_tiny.jpg"
 
 prism: prism.hs
-	ghc prism.hs
+	ghc -p prism.hs
 
 prism-vector: prism-vector.hs
 	ghc prism-vector.hs
 
-test:
-	cat $(TEST_IMG) | ./prism
+.PHONY: prof
+prof:
+	ghc -prof -fprof-cafs -fprof-auto-calls prism.hs
+	cat $(TEST_IMG) | ./prism +RTS -p -RTS
 
 test-vector:
 	cat $(TEST_IMG) | ./prism-vector
