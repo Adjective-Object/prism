@@ -1,17 +1,32 @@
-all: prof
+all: prism
+.PHONY: prism prof clean
 
-TEST_IMG="dock_tiny.jpg"
+TEST_IMG="images/dock_tiny.jpg"
+BUILD_PATH=dist/build
 
-prism: prism.hs
-	ghc -p prism.hs
+prism: src
+	cabal configure
+	cabal build
+	cp $(BUILD_PATH)/prism/prism ./prism
 
-prism-vector: prism-vector.hs
-	ghc prism-vector.hs
+prism-prof: src
+	cabal configure \
+		--enable-library-profiling \
+		--enable-executable-profiling \
+		--enable-tests \
+		--enable-benchmarks
+	cabal build
+	cp $(BUILD_PATH)/prism/prism ./prism-prof
 
-.PHONY: prof
-prof:
-	ghc -prof -fprof-cafs -fprof-auto-calls prism.hs
-	cat $(TEST_IMG) | ./prism +RTS -p -RTS
+test: prism-prof
+	./prism-prof +RTS -p -RTS
 
-test-vector:
-	cat $(TEST_IMG) | ./prism-vector
+prof-vector:
+	ghc -prof -fprof-cafs -fprof-auto-calls src/prism-vector.hs
+	cat $(TEST_IMG) | ./prism +RTS -p -RTS 
+
+clean:
+	rm -f *.o
+	rm -f *.hi
+	rm -f prism
+	rm -f prism-vector
