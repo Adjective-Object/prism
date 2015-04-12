@@ -22,7 +22,6 @@ executable prism
   hs-source-dirs: src
   ghc-options:
     -O2
-    -prof
     -fprof-cafs
     -fprof-auto-calls
   build-depends:

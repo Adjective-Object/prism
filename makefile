@@ -1,10 +1,10 @@
 all: prism
-.PHONY: prism prof clean
+.PHONY: clean
 
 TEST_IMG="images/dock_tiny.jpg"
 BUILD_PATH=dist/build
 
-prism: src
+prism: src/*.hs
 	cabal configure
 	cabal build
 	cp $(BUILD_PATH)/prism/prism ./prism
@@ -18,8 +18,12 @@ prism-prof: src
 	cabal build
 	cp $(BUILD_PATH)/prism/prism ./prism-prof
 
-test: prism-prof
+test: prism
 	./prism-prof +RTS -p -RTS
+
+proftest: prism-prof
+	./prism-prof +RTS -p -RTS
+
 
 prof-vector:
 	ghc -prof -fprof-cafs -fprof-auto-calls src/prism-vector.hs
