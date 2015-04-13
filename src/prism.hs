@@ -143,18 +143,23 @@ rgbToHexCode channels = foldl' (++) "#" hexes
                                     then "0" ++ x
                                     else x) shortHexes
 
-showColoursXResources :: Int ->  [String] -> String
-showColoursXResources _ [] = "\n"
-showColoursXResources index (x:xs) = 
-    let name = case index of 
-            0 -> "background"
-            1 -> "foreground"
-            _ -> (++) "color" $ show $ index - 2 
-    in "*." 
-        ++ name 
-        ++ ":\t" ++ x 
+showSequenceXResources :: (Show a) => [String] -> Int -> [a] -> String
+showSequenceXResources _ _ [] = ""
+showSequenceXResources (name:names) index (x:xs) = 
+    name 
+        ++ ":\t" 
+        ++ (show x) 
         ++ "\n" 
-        ++ (showColoursXResources (index + 1) xs)
+        ++ (showSequenceXResources names (index + 1) xs)
+
+showColoursXResources colours =
+    let colourNamer = 
+            (\ index -> "*." ++ case index of 
+                0 -> "background"
+                1 -> "foreground"
+                _ -> (++) "color" $ show $ index - 2)        
+        colourNames = map colourNamer [0..]
+    in showSequenceXResources colourNames 0 colours
 
 imgSuccess :: DynamicImage -> IO()
 imgSuccess img = do
@@ -163,7 +168,7 @@ imgSuccess img = do
                 imgPixelsLAB = map convertToLAB imgPixelsRGB
                 coloursLAB = buildTerminalColours imgPixelsLAB
                 coloursRGB = map convertToRGB coloursLAB
-            putStrLn $ showColoursXResources 0 $ map rgbToHexCode coloursRGB
+            putStrLn $ showColoursXResources $ map rgbToHexCode coloursRGB
 
 imgFailure :: String -> IO()
 imgFailure msg = do
