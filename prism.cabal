@@ -29,4 +29,5 @@ executable prism
     kmeans,
     prizm,
     bytestring,
+    MissingH,
     base >=4.5

@@ -3,14 +3,9 @@ module Main where
 -- Simple stuff for IO
 import System.IO (stdin)
 import Data.ByteString (hGetContents)
+import Data.String.Utils(split, join)
 import System.Exit (exitWith, ExitCode(..))
 import Numeric (showHex)
-
--- list helpers
-import Data.List (transpose, foldl')
-
--- kmeans
-import Data.KMeans (kmeansGen)
 
 -- codec imports
 import Codec.Picture.Types(pixelFold, convertImage, ColorSpaceConvertible)
@@ -23,6 +18,12 @@ import Codec.Picture (decodeImage,
 -- colour conversions
 import Data.Prizm.Color.CIE.LAB(fromRGB, toRGB)
 import Data.Prizm.Types(CIELAB(CIELAB), RGB(RGB))
+
+-- Terminal Colours Module
+import TerminalColours (buildTerminalColours)
+
+-- list helpers
+import Data.List (foldl')
 
 
 
@@ -41,55 +42,6 @@ convertImageToDoubleList img =
         ImageRGB8   i   -> c i
         ImageYCbCr8 i   -> c (ci i :: Image PixelRGB8)
         _ -> [[0.0]]
-
-
-
-
--- Build a set of terminal colours using kmeans from Data.KMeans
--- returning colours in RGB format
-buildTerminalColours :: [[Double]] -> [[Double]]
-buildTerminalColours pixels = 
-    let (bkg:colours_raw) = getBaseColours pixels
-        min_colour_l = 50
-        colours_dark = map (\ [l, a, b] -> 
-                [if l > min_colour_l then l else min_colour_l, a, b])
-            colours_raw
-        colours_light = map (\ [l, a, b] -> 
-                [min (100 - (100 - l) / 2) (l+10), a, b])
-            colours_dark
-        [fl, fa, fb] = averageColour colours_light
-        foreground = [max 90 $ maximum 
-                        (map (\ [l, _, _] -> l) colours_light), 
-                        fa/3, fb/3]
-    in [bkg, foreground] ++ colours_dark ++ colours_light  
-
-averageColour :: [[Double]] -> [Double]
-averageColour lst = 
-    let sums = foldl1 (\ a b -> map (\ (x, y) -> x + y) (zip a b)) lst
-        len = fromIntegral (length lst) :: Double
-    in map (\ s -> s / len) sums
-
-getBaseColours :: [[Double]] -> [[Double]]
-getBaseColours pixels = 
-    let requiredColours = 9
-        thresholds = [50, -5 .. 0]
-        -- generate 9 colours (8 dominants and a background)
-        all_blocks = map 
-            (\ t -> kmeansGen (thresholdColour t) requiredColours pixels)
-            thresholds
-        blocks = (filter (\b -> length b >= requiredColours) all_blocks) !! 0
-        colourChannels = map transpose blocks
-    in map (\ channels -> map avg channels ) colourChannels
-
--- group together low values (assuming a dark colour scheme)
-thresholdColour :: Double -> [Double] -> [Double]
-thresholdColour threshold [l, a, b] = 
-    if l < threshold
-        then [-100,0,0]
-        else [l,a,b]
-
-avg :: [Double] -> Double
-avg a = (sum a) / (fromIntegral (length a) :: Double)
 
 
 
@@ -115,7 +67,6 @@ convertToRGB [l, a, b] = let
         rgb = toRGB lab
         RGB _r _g _b = rgb
     in map toDouble [_r, _g, _b]
-
 
 
 
@@ -161,14 +112,45 @@ showColoursXResources colours =
         colourNames = map colourNamer [0..]
     in showSequenceXResources colourNames 0 colours
 
+showSequenceINI :: (Show a) => [String] -> Int -> [a] -> String 
+showSequenceINI _ _ [] = ""
+showSequenceINI (name:names) index (x:xs) =
+    "\t"
+        ++ name
+        ++ " = "
+        ++ (show x)
+        ++ "\n"
+        ++ (showSequenceINI names (index + 1) xs)
+
+showColoursXGCM colours =
+    let names = ["foreground"
+                , "background"
+                , "black"
+                , "bright_black"
+                , "red"
+                , "bright_red"
+                , "green"
+                , "bright_green"
+                , "yellow"
+                , "bright_yellow"
+                , "blue"
+                , "bright_blue"
+                , "magenta"
+                , "bright_magenta"
+                , "cyan"
+                , "bright_cyan"
+                , "white"
+                , "bright_white"]
+    in "[attributes]\n" ++ showSequenceINI names 0 colours
+
 imgSuccess :: DynamicImage -> IO()
 imgSuccess img = do
-            putStrLn $ "image colour space: " ++ getColourSpaceName img
+            -- putStrLn $ getColourSpaceName img
             let imgPixelsRGB = convertImageToDoubleList img
                 imgPixelsLAB = map convertToLAB imgPixelsRGB
                 coloursLAB = buildTerminalColours imgPixelsLAB
                 coloursRGB = map convertToRGB coloursLAB
-            putStrLn $ showColoursXResources $ map rgbToHexCode coloursRGB
+            putStrLn $ showColoursXGCM $ map rgbToHexCode coloursRGB
 
 imgFailure :: String -> IO()
 imgFailure msg = do
@@ -176,7 +158,7 @@ imgFailure msg = do
 
 main :: IO()
 main = do
-    putStrLn "reading image.."
-    im <- readImage "images/dock_tiny.jpg"
-    -- imstream <- hGetContents stdin
-    either imgFailure imgSuccess $ im -- decodeImage
+    -- im <- readImage "images/dock_tiny.jpg"
+    imStream <- hGetContents stdin
+    let im = decodeImage imStream
+    either imgFailure imgSuccess im
