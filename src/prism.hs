@@ -22,7 +22,11 @@ import Codec.Picture (decodeImage,
 
 -- My Modules
 import TerminalColours (buildTerminalColoursKMeans)
-import ImageAbstractions (processDynamicImage, convertToRGB, convertToLAB)
+import ImageAbstractions (
+    processDynamicImage, 
+    convertToRGB, 
+    convertToLAB, 
+    ColourRGB)
 import IOHelpers (showColoursXGCM, showColoursXResources)
 
 
@@ -34,6 +38,9 @@ data FLAG = HELP
     | THEME_DARK
 
     | METHOD_KMEANS
+
+    | FORMAT_XRESOURCES
+    | FORMAT_XGCM
     deriving (Show, Eq)
 
 (+\) a b = a ++ "\n" ++ b
@@ -41,7 +48,7 @@ data FLAG = HELP
 
 -- help text
 helpText :: String -> String
-helpText progName = 
+helpText progName =
     "usage: " ++ progName ++ " [options] [imagePath]" +\
     "imagePath can be either a path to an image or \"-\","
         ++ "to read from stdin" +\
@@ -49,11 +56,11 @@ helpText progName =
         ( intercalate "\n    " optionStrings)
 
 optionStrings :: [String]
-optionStrings = 
+optionStrings =
     let pairs =  map (\ (Option shorts longs _ desc) ->
-                    ((intercalate ", " (map (\c -> ['-',c]) shorts)) 
-                    ++ " "
-                    ++ (intercalate ", " longs), desc)) options
+                    let fnames = map (\c -> ['-',c]) shorts
+                              ++ map (\l -> "--" ++ l) longs
+                    in (intercalate ", " fnames, desc)) options
         maxflagstrlen = maximum $ map (\ (flagstr, _) -> length flagstr) pairs
     in map (\ (flagstr, desc) ->
         flagstr
@@ -65,12 +72,12 @@ optionStrings =
 help_opt =
     Option ['h'] ["help"]
         (NoArg (Flag HELP))
-        "HELP"
+        "display helptext and exit"
 
 background_opt =
     Option ['t'] ["theme"]
-        (ReqArg mapping "LIGHTNESS")
-        "THEME lightnes (light/dark)"
+        (ReqArg mapping "THEME")
+        "theme lightness (light/dark)"
     where mapping =
             (\arg -> case arg of
                 "light" -> Flag THEME_LIGHT
@@ -80,27 +87,38 @@ background_opt =
 method_opt =
     Option ['m'] ["method"]
         (ReqArg mapping "METHOD")
-        "generation METHOD (kmeans/..)"
+        "generation method (kmeans/..)"
     where mapping =
             (\arg -> case arg of
                 "kmeans" -> Flag METHOD_KMEANS
                 u        -> Error ("Unknown method " ++ show u))
 
+format_opt =
+    Option ['o', 'f'] ["output", "format"]
+        (ReqArg mapping "FORMAT")
+        "output format (xresources/xgcm)"
+    where mapping =
+            (\arg -> case arg of
+                "xresources" -> Flag FORMAT_XRESOURCES
+                "xgcm"       -> Flag FORMAT_XGCM
+                u            -> Error ("Unknown format " ++ show u))
+
 options :: [OptDescr MaybeFlag]
 options =
     [ help_opt
     , background_opt
-    , method_opt ]
+    , method_opt
+    , format_opt ]
 
 
 getOpt :: [String] -> Either String ([FLAG], [String])
 getOpt argv =
     let (flags, nonopts, unknownopts, errs) = getOpt' Permute options argv
-        flagErrors = filter 
-            (\ f -> case f of 
+        flagErrors = filter
+            (\ f -> case f of
                 Error _ -> True
                 _       -> False) flags
-        
+
     in if length flagErrors > 0
         then let flagErrorMessages = map (\ (Error s) -> s) flagErrors
             in Left ("Error in parsing flags:\n\t"
@@ -110,17 +128,27 @@ getOpt argv =
             else let realFlags = map (\ (Flag f) -> f) flags
                 in Right (realFlags, nonopts)
 
+-- TODO actually parse FLAGs for the appropriate builder/shower
+getBuilderFromFlags :: [FLAG] -> ([ColourRGB] -> [[Double]])
+getBuilderFromFlags flags = buildTerminalColoursKMeans
+
+getShowerFromFlags :: [FLAG] -> ([ColourRGB] -> String)
+getShowerFromFlags flags = showColoursXGCM
+
 -- split path on image decoding error
 either' switch fail succeed = either fail succeed switch
 
-imgSuccess :: DynamicImage -> IO()
-imgSuccess img = do
+imgSuccess :: [FLAG] -> DynamicImage -> IO()
+imgSuccess flags img = do
     -- putStrLn $ getColourSpaceName img
-    let imgPixelsRGB = processDynamicImage img
+    let buildColours = getBuilderFromFlags flags
+        showColours  = getShowerFromFlags flags
+
+        imgPixelsRGB = processDynamicImage img
         imgPixelsLAB = map convertToLAB imgPixelsRGB
-        coloursLAB = buildTerminalColoursKMeans imgPixelsLAB
+        coloursLAB = buildColours imgPixelsLAB
         coloursRGB = map convertToRGB coloursLAB
-    putStrLn $ showColoursXGCM $ coloursRGB
+    putStrLn $ showColours $ coloursRGB
 
 exitWithError err = do
     putStrLn err
@@ -145,7 +173,7 @@ main = do
         if HELP `elem` flags || length imagePaths == 0
             then printHelpText
             else return ()
-        
+
         -- throw error if multiple images passed over stdin
         if length imagePaths > 1
             then exitWithError "can only process a single image"
@@ -158,4 +186,4 @@ main = do
                         return (decodeImage imStream)
                 else readImage (imagePaths !! 0)
 
-        either' im imgFailure imgSuccess)
+        either' im imgFailure (imgSuccess flags) )

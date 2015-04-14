@@ -18,10 +18,10 @@ prism-prof: src/*
 	cabal build
 
 test: prism 
-	time sh -c 'cat $(TEST_IMG) | ./prism'
+	time sh -c 'cat $(TEST_IMG) | ./prism -'
 
 proftest: prism-prof
-	time sh -c 'cat $(TEST_IMG)| ./prism +RTS -p -RTS'
+	time sh -c 'cat $(TEST_IMG)| ./prism - +RTS -p -RTS'
 
 clean:
 	rm -f *.o

@@ -15,12 +15,13 @@ import Data.Prizm.Types(CIELAB(CIELAB), RGB(RGB))
 -- list helpers
 import Data.List (transpose)
 
+import ImageAbstractions(ColourRGB, ColourLAB)
 
 
 
 -- Build a set of terminal colours using kmeans from Data.KMeans
 -- returning colours in RGB format
-buildTerminalColoursKMeans :: [[Double]] -> [[Double]]
+buildTerminalColoursKMeans :: [ColourRGB] -> [ColourRGB]
 buildTerminalColoursKMeans pixels = 
     let (bkg:colours_raw) = getBaseColours pixels
         min_colour_l = 50
@@ -36,13 +37,13 @@ buildTerminalColoursKMeans pixels =
                         fa/3, fb/3]
     in [bkg, foreground] ++ colours_dark ++ colours_light  
 
-averageColour :: [[Double]] -> [Double]
+averageColour :: [ColourRGB] -> ColourRGB
 averageColour lst = 
     let sums = foldl1 (\ a b -> map (\ (x, y) -> x + y) (zip a b)) lst
         len = fromIntegral (length lst) :: Double
     in map (\ s -> s / len) sums
 
-getBaseColours :: [[Double]] -> [[Double]]
+getBaseColours :: [ColourRGB] -> [ColourRGB]
 getBaseColours pixels = 
     let requiredColours = 9
         thresholds = [50, -5 .. 0]
@@ -55,7 +56,7 @@ getBaseColours pixels =
     in map (\ channels -> map avg channels ) colourChannels
 
 -- group together low values (assuming a dark colour scheme)
-thresholdColour :: Double -> [Double] -> [Double]
+thresholdColour :: Double -> ColourLAB -> ColourLAB
 thresholdColour threshold [l, a, b] = 
     if l < threshold
         then [-100,0,0]
