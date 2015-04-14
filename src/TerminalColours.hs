@@ -20,8 +20,8 @@ import Data.List (transpose)
 
 -- Build a set of terminal colours using kmeans from Data.KMeans
 -- returning colours in RGB format
-buildTerminalColours :: [[Double]] -> [[Double]]
-buildTerminalColours pixels = 
+buildTerminalColoursKMeans :: [[Double]] -> [[Double]]
+buildTerminalColoursKMeans pixels = 
     let (bkg:colours_raw) = getBaseColours pixels
         min_colour_l = 50
         colours_dark = map (\ [l, a, b] -> 

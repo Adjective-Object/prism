@@ -4,12 +4,12 @@ all: prism
 TEST_IMG=images/dock_tiny.jpg
 BUILD_PATH=dist/build
 
-prism: src
+prism: src/*
 	cabal configure
 	cabal build
 	cp $(BUILD_PATH)/prism/prism ./prism
 
-prism-prof: src
+prism-prof: src/*
 	cabal configure \
 		--enable-library-profiling \
 		--enable-executable-profiling \
