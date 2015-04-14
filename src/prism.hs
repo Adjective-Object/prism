@@ -1,11 +1,11 @@
 module Main where
 
-import Data.List (foldl', intercalate)
+import Data.List (foldl', intercalate, repeat)
 
 -- Simple stuff for IO
 import System.IO (stdin)
 import System.Exit (exitWith, ExitCode(..))
-import System.Environment (getArgs)
+import System.Environment (getProgName, getArgs)
 import Data.ByteString (hGetContents)
 import Data.String.Utils(split, join)
 import System.Console.GetOpt (
@@ -26,22 +26,51 @@ import ImageAbstractions (processDynamicImage, convertToRGB, convertToLAB)
 import IOHelpers (showColoursXGCM, showColoursXResources)
 
 
-
 data MaybeFlag = Error String | Flag FLAG
 
 -- options
-data FLAG = 
-      THEME_LIGHT
+data FLAG = HELP
+    | THEME_LIGHT
     | THEME_DARK
 
     | METHOD_KMEANS
-    deriving (Show)
+    deriving (Show, Eq)
+
+(+\) a b = a ++ "\n" ++ b
+(+\\) a b = a ++ "\n    " ++ b
+
+-- help text
+helpText :: String -> String
+helpText progName = 
+    "usage: " ++ progName ++ " [options] [imagePath]" +\
+    "imagePath can be either a path to an image or \"-\","
+        ++ "to read from stdin" +\
+    "[options] one of" +\\
+        ( intercalate "\n    " optionStrings)
+
+optionStrings :: [String]
+optionStrings = 
+    let pairs =  map (\ (Option shorts longs _ desc) ->
+                    ((intercalate ", " (map (\c -> ['-',c]) shorts)) 
+                    ++ " "
+                    ++ (intercalate ", " longs), desc)) options
+        maxflagstrlen = maximum $ map (\ (flagstr, _) -> length flagstr) pairs
+    in map (\ (flagstr, desc) ->
+        flagstr
+        ++ take (8 + maxflagstrlen - length flagstr) (repeat ' ')
+        ++ desc) pairs
+
 
 -- opt definitions
+help_opt =
+    Option ['h'] ["help"]
+        (NoArg (Flag HELP))
+        "HELP"
+
 background_opt =
     Option ['t'] ["theme"]
         (ReqArg mapping "LIGHTNESS")
-        "theme LIGHTNESS (light/dark)"
+        "THEME lightnes (light/dark)"
     where mapping =
             (\arg -> case arg of
                 "light" -> Flag THEME_LIGHT
@@ -59,8 +88,10 @@ method_opt =
 
 options :: [OptDescr MaybeFlag]
 options =
-    [ background_opt
+    [ help_opt
+    , background_opt
     , method_opt ]
+
 
 getOpt :: [String] -> Either String ([FLAG], [String])
 getOpt argv =
@@ -98,12 +129,33 @@ exitWithError err = do
 imgFailure :: String -> IO()
 imgFailure msg = exitWithError $ "Error decoding image:\n" ++ msg
 
+printHelpText :: IO()
+printHelpText = do
+    progName <- getProgName
+    putStrLn $ helpText progName
+    exitWith ExitSuccess
+
 main :: IO()
 main = do
     argv <- getArgs
-    either' (getOpt argv) exitWithError (\flags ->
+    either' (getOpt argv) exitWithError (\opts ->
         do
-        -- im <- readImage "images/dock_tiny.jpg"
-        imStream <- hGetContents stdin
-        let im = decodeImage imStream
+        let (flags, imagePaths) = opts
+
+        if HELP `elem` flags || length imagePaths == 0
+            then printHelpText
+            else return ()
+        
+        -- throw error if multiple images passed over stdin
+        if length imagePaths > 1
+            then exitWithError "can only process a single image"
+            else return ()
+
+        -- read from stdin if argument is "-" or if no arguments
+        -- otherwise, read from the path specfied by the first argument
+        im <- if (imagePaths !! 0) == "-"
+                then do imStream <- hGetContents stdin
+                        return (decodeImage imStream)
+                else readImage (imagePaths !! 0)
+
         either' im imgFailure imgSuccess)
