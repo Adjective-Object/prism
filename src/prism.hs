@@ -1,6 +1,6 @@
 module Main where
 
-import Data.List (foldl', intercalate, repeat)
+import Data.List (foldl', intercalate, repeat, intersect)
 
 -- Simple stuff for IO
 import System.IO (stdin)
@@ -15,17 +15,21 @@ import System.Console.GetOpt (
     ArgOrder(Permute))
 
 -- codec imports
-import Codec.Picture.Types(pixelFold, convertImage, ColorSpaceConvertible)
-import Codec.Picture (decodeImage,
-                        readImage,
-                        DynamicImage (..))
+import Codec.Picture.Types(
+    pixelFold,
+    convertImage,
+    ColorSpaceConvertible)
+import Codec.Picture (
+    decodeImage,
+    readImage,
+    DynamicImage (..))
 
 -- My Modules
 import TerminalColours (buildTerminalColoursKMeans)
 import ImageAbstractions (
-    processDynamicImage, 
-    convertToRGB, 
-    convertToLAB, 
+    processDynamicImage,
+    convertToRGB,
+    convertToLAB,
     ColourRGB)
 import IOHelpers (showColoursXGCM, showColoursXResources)
 
@@ -128,12 +132,30 @@ getOpt argv =
             else let realFlags = map (\ (Flag f) -> f) flags
                 in Right (realFlags, nonopts)
 
--- TODO actually parse FLAGs for the appropriate builder/shower
-getBuilderFromFlags :: [FLAG] -> ([ColourRGB] -> [[Double]])
-getBuilderFromFlags flags = buildTerminalColoursKMeans
 
-getShowerFromFlags :: [FLAG] -> ([ColourRGB] -> String)
-getShowerFromFlags flags = showColoursXGCM
+-- this is where switching on flags actually happens
+switchFlags :: [FLAG] -> (FLAG -> a) -> [FLAG] -> a
+switchFlags relevantFlags mapping flags = 
+    let rf = relevantFlags `intersect` flags
+    in if length rf == 0
+        then mapping $ relevantFlags !! 0 -- default
+        else mapping $ rf !! 0
+
+getBuilderFromFlags :: [FLAG] -> ([ColourRGB] -> [ColourRGB])
+getBuilderFromFlags = 
+    switchFlags 
+        [METHOD_KMEANS] 
+        (\ f -> case f of 
+            METHOD_KMEANS -> buildTerminalColoursKMeans)
+
+getFormatterFromFlags :: [FLAG] -> ([ColourRGB] -> String)
+getFormatterFromFlags = 
+    switchFlags 
+        [FORMAT_XGCM, FORMAT_XRESOURCES] 
+        (\ f -> case f of 
+            FORMAT_XGCM -> showColoursXGCM
+            FORMAT_XRESOURCES -> showColoursXResources)
+
 
 -- split path on image decoding error
 either' switch fail succeed = either fail succeed switch
@@ -142,7 +164,7 @@ imgSuccess :: [FLAG] -> DynamicImage -> IO()
 imgSuccess flags img = do
     -- putStrLn $ getColourSpaceName img
     let buildColours = getBuilderFromFlags flags
-        showColours  = getShowerFromFlags flags
+        showColours  = getFormatterFromFlags flags
 
         imgPixelsRGB = processDynamicImage img
         imgPixelsLAB = map convertToLAB imgPixelsRGB
