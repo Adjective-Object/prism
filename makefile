@@ -11,20 +11,20 @@ prism: src/*
 
 prism-prof: src/*
 	cabal configure \
-		--enable-library-profiling \
 		--enable-executable-profiling \
-		--enable-tests \
-		--enable-benchmarks
+		--enable-benchmarks \
+		--enable-tests
 	cabal build
+	cp $(BUILD_PATH)/prism/prism ./prism-prof
 
 test: prism 
 	time sh -c 'cat $(TEST_IMG) | ./prism -'
 
 proftest: prism-prof
-	time sh -c 'cat $(TEST_IMG)| ./prism - +RTS -p -RTS'
+	time sh -c 'cat $(TEST_IMG)| ./prism-prof - +RTS -p -RTS'
 
 clean:
 	rm -f *.o
 	rm -f *.hi
 	rm -f prism
-	rm -f prism-vector
+	rm -f prism-prof

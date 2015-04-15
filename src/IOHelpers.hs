@@ -54,8 +54,8 @@ showSequenceINI (name:names) index (x:xs) =
         ++ "\n"
         ++ (showSequenceINI names (index + 1) xs)
 
-showColoursXGCM :: [ColourRGB] -> String
-showColoursXGCM colours =
+showColoursXGCM :: String -> [ColourRGB] -> String
+showColoursXGCM imgpath colours =
     let names = ["foreground"
                 , "background"
                 , "black"
@@ -74,4 +74,6 @@ showColoursXGCM colours =
                 , "bright_cyan"
                 , "white"
                 , "bright_white"]
-    in "[attributes]\n" ++ showSequenceINI names 0 (map rgbToHexCode colours)
+    in "[attributes]\n" 
+        ++ (if imgpath /= "" then "\tdesktop = \"" ++ imgpath ++"\"\n" else "")
+        ++ showSequenceINI names 0 (map rgbToHexCode colours)

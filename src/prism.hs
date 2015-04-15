@@ -148,23 +148,23 @@ getBuilderFromFlags =
         (\ f -> case f of 
             METHOD_KMEANS -> buildTerminalColoursKMeans)
 
-getFormatterFromFlags :: [FLAG] -> ([ColourRGB] -> String)
-getFormatterFromFlags = 
+getFormatterFromFlags :: String -> [FLAG] -> ([ColourRGB] -> String)
+getFormatterFromFlags imgpath = 
     switchFlags 
         [FORMAT_XGCM, FORMAT_XRESOURCES] 
         (\ f -> case f of 
-            FORMAT_XGCM -> showColoursXGCM
+            FORMAT_XGCM -> showColoursXGCM imgpath
             FORMAT_XRESOURCES -> showColoursXResources)
 
 
 -- split path on image decoding error
 either' switch fail succeed = either fail succeed switch
 
-imgSuccess :: [FLAG] -> DynamicImage -> IO()
-imgSuccess flags img = do
+imgSuccess :: [FLAG] -> String  -> DynamicImage -> IO()
+imgSuccess flags imgpath img = do
     -- putStrLn $ getColourSpaceName img
     let buildColours = getBuilderFromFlags flags
-        showColours  = getFormatterFromFlags flags
+        showColours  = getFormatterFromFlags imgpath flags
 
         imgPixelsRGB = processDynamicImage img
         imgPixelsLAB = map convertToLAB imgPixelsRGB
@@ -204,8 +204,12 @@ main = do
         -- read from stdin if argument is "-" or if no arguments
         -- otherwise, read from the path specfied by the first argument
         im <- if (imagePaths !! 0) == "-"
-                then do imStream <- hGetContents stdin
-                        return (decodeImage imStream)
-                else readImage (imagePaths !! 0)
+            then do imStream <- hGetContents stdin
+                    return (decodeImage imStream)
+            else readImage (imagePaths !! 0)
 
-        either' im imgFailure (imgSuccess flags) )
+        let impath = if (imagePaths !! 0) == "-"
+                then ""
+                else imagePaths !! 0
+
+        either' im imgFailure (imgSuccess flags impath) )
