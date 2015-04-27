@@ -27,7 +27,7 @@ import Codec.Picture (
 -- My Modules
 import TerminalColours (buildTerminalColoursKMeans)
 import ImageAbstractions (
-    processDynamicImage,
+    sampleFromDynamicImage,
     convertToRGB,
     convertToLAB,
     ColourRGB)
@@ -166,7 +166,7 @@ imgSuccess flags imgpath img = do
     let buildColours = getBuilderFromFlags flags
         showColours  = getFormatterFromFlags imgpath flags
 
-        imgPixelsRGB = processDynamicImage img
+        imgPixelsRGB = sampleFromDynamicImage img
         imgPixelsLAB = map convertToLAB imgPixelsRGB
         coloursLAB = buildColours imgPixelsLAB
         coloursRGB = map convertToRGB coloursLAB
@@ -198,7 +198,7 @@ main = do
 
         -- throw error if multiple images passed over stdin
         if length imagePaths > 1
-            then exitWithError "can only process a single image"
+            then exitWithError "can only process a single image at a time"
             else return ()
 
         -- read from stdin if argument is "-" or if no arguments
