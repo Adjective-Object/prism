@@ -2,8 +2,8 @@ module ImageAbstractions where
 
 import Data.Prizm.Color.CIE.LAB(fromRGB, toRGB)
 import Data.Prizm.Types(CIELAB(CIELAB), RGB(RGB))
-
-import Debug.Trace
+import qualified Data.Colour.RGBSpace as C (RGB(RGB))
+import Data.Colour.RGBSpace.HSV(hue)
 
 import Codec.Picture.Types(
     convertPixel,
@@ -18,8 +18,6 @@ import Codec.Picture (
 type ColourRGB = [Double]
 type ColourLAB = [Double]
 
-traceVal x = trace (show x) x
-traceSeq x = seq $ trace (show x) x
 
 --for sampling pixels from an image
 pixelToDoubleList :: PixelRGB8 -> ColourRGB
@@ -31,8 +29,6 @@ gridSample :: Image a -> (Int,Int) -> [(Int, Int)]
 gridSample img (gridx, gridy) =
     let width = (imageWidth img) `quot` gridx
         height = (imageHeight img) `quot` gridy
-        --t = trace $ show (gridx, gridy)
-        --tt = t $ trace $ show (width, height)
         gencoords = (\ dist ->
             (zip [0..(min dist width)] (repeat (min dist height))) ++
             (zip (repeat (min dist width)) [0..(min dist height)]) )
@@ -82,3 +78,8 @@ convertToRGB [l, a, b] = let
         rgb = toRGB lab
         RGB _r _g _b = rgb
     in map toDouble [_r, _g, _b]
+
+getHue :: ColourRGB -> Double
+getHue [r, g, b] = let 
+        rgb = (C.RGB r g b)
+    in hue rgb

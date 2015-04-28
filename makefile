@@ -5,17 +5,17 @@ TEST_IMG=images/dock_tiny.jpg
 BUILD_PATH=dist/build
 
 prism: src/*
-	cabal configure
 	cabal install --only-dependencies
+	cabal configure
 	cabal build
 	cp $(BUILD_PATH)/prism/prism ./prism
 
 prism-prof: src/*
+	cabal install --only-dependencies
 	cabal configure \
 		--enable-executable-profiling \
 		--enable-benchmarks \
 		--enable-tests
-	cabal install --only-dependencies
 	cabal build
 	cp $(BUILD_PATH)/prism/prism ./prism-prof
 

@@ -24,7 +24,7 @@ executable prism
     -O2
     -fprof-cafs
     -fprof-auto-calls
-    --prof
+    -prof
   extensions:
     FlexibleContexts
   build-depends:
@@ -34,4 +34,5 @@ executable prism
     bytestring,
     MissingH,
     canonical-filepath,
+    colour,
     base >=4.5
