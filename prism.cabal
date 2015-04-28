@@ -4,7 +4,6 @@
 name:               prism
 version:            0.1.0.0
 synopsis:           A simple command line tool for generating colour palettes from images
-extensions:         FlexibleContexts
 
 -- description:
 homepage:           https://github.com/Adjective-Object/prism
@@ -25,12 +24,14 @@ executable prism
     -O2
     -fprof-cafs
     -fprof-auto-calls
-    -XFlexibleContexts
     --prof
+  extensions:
+    FlexibleContexts
   build-depends:
     JuicyPixels,
     kmeans,
     prizm,
     bytestring,
     MissingH,
+    canonical-filepath,
     base >=4.5

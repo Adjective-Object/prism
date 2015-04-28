@@ -8,6 +8,8 @@ import System.Exit (exitWith, ExitCode(..))
 import System.Environment (getProgName, getArgs)
 import Data.ByteString (hGetContents)
 import Data.String.Utils(split, join)
+
+import System.FilePath.Canonical
 import System.Console.GetOpt (
     getOpt',
     OptDescr(..),
@@ -212,4 +214,9 @@ main = do
                 then ""
                 else imagePaths !! 0
 
-        either' im imgFailure (imgSuccess flags impath) )
+        -- get the canonical (absolute) path of the image
+        realpath <- canonical impath
+        let canonicalpath = canonicalFilePath realpath
+
+        either' im imgFailure (imgSuccess flags canonicalpath)
+        )
