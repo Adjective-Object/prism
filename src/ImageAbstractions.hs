@@ -17,6 +17,7 @@ import Codec.Picture (
 
 type ColourRGB = [Double]
 type ColourLAB = [Double]
+type ColourHSL = [Double]
 
 
 --for sampling pixels from an image

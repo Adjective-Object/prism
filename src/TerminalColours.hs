@@ -28,7 +28,7 @@ euclidDist :: [Double] -> [Double] -> Double
 euclidDist a b = sqrt (euclidSq a b)
 
 coloursetDist :: [Hue] -> [Hue] -> Double
-coloursetDist base test = 
+coloursetDist base test =
     let tsum (x, y)       = x + y
         offset            = map (\ b -> -b) test
         offset_hypotenuse = map tsum (zip (repeat 1) offset)
@@ -42,24 +42,24 @@ coloursetDist base test =
     in euclidDist projection test
 
 shiftHues :: Double -> [Hue] -> [Hue]
-shiftHues cap (x:xs) = 
+shiftHues cap (x:xs) =
     let offsetList = map (\a -> a - x) xs
     in offsetList ++ [cap - x]
 
 -- finds the closest 'rotation' of a colourset under cap, i.e.
--- the maximum of 
+-- the maximum of
 --   [a,b,c]
 --   [b,c,a]
 --   [c,a,b]
 -- (with appropriate offsets)
 closestColourset :: Double -> [Hue] -> [Hue] -> Int
-closestColourset cap reference test = 
+closestColourset cap reference test =
     let makeNext = (\ xs _ -> xs ++ [shiftHues cap $ last xs])
         colourSets = foldl makeNext [test] [1..((length test) - 2)]
         distances = map (\ set -> coloursetDist reference set) colourSets
         minDist = minimum distances
-        Just minDistIndex = elemIndex minDist distances 
-    in minDistIndex 
+        Just minDistIndex = elemIndex minDist distances
+    in minDistIndex
 
 findBestBasePallete :: [ColourRGB] -> [ColourRGB]
 findBestBasePallete pal =
@@ -78,37 +78,51 @@ findBestBasePallete pal =
         index = closestColourset hueCap hueBase huePal
     in (drop index pal) ++ (take index pal)
 
+
+interleave :: [a] -> [a] -> [a]
+interleave xs     []     = xs
+interleave []     ys     = ys
+interleave (x:xs) (y:ys) = x : y : interleave xs ys
+
+lightenLAB fixed scale [l, a, b] = 
+    [ min (100 - (100 - l) * scale)
+          (l+fixed)
+    , a
+    , b]
+
 -- Build a set of terminal colours using kmeans from Data.KMeans
 -- returning colours in RGB format
-buildTerminalColoursKMeans :: [ColourRGB] -> [ColourRGB]
-buildTerminalColoursKMeans pixels = 
+buildTerminalColoursKMeans :: [ColourLAB] -> [ColourLAB]
+buildTerminalColoursKMeans pixels =
     let (background:colours_raw) = getBaseColours pixels
         colours_matched = findBestBasePallete colours_raw
         min_colour_l = 50
-        colours_dark = map (\ [l, a, b] -> 
+
+        colours_dark = map (\ [l, a, b] ->
                 [if l > min_colour_l then l else min_colour_l, a, b])
             colours_matched
-        colours_light = map (\ [l, a, b] -> 
-                [min (100 - (100 - l) / 2) (l+10), a, b])
-            colours_dark
+
+        colours_light = map (lightenLAB 20 0.2) colours_dark
+            
+
         [fl, fa, fb] = averageColour colours_light
-        foreground = [max 90 $ maximum 
-                        (map (\ [l, _, _] -> l) colours_light), 
+        foreground = [max 90 $ maximum
+                        (map (\ [l, _, _] -> l) colours_light),
                         fa/3, fb/3]
-    in [foreground, background] ++ colours_dark ++ colours_light  
+    in [foreground, background] ++ (interleave colours_dark colours_light)
 
 averageColour :: [ColourRGB] -> ColourRGB
-averageColour lst = 
+averageColour lst =
     let sums = foldl1 (\ a b -> map (\ (x, y) -> x + y) (zip a b)) lst
         len = fromIntegral (length lst) :: Double
     in map (\ s -> s / len) sums
 
 getBaseColours :: [ColourRGB] -> [ColourRGB]
-getBaseColours pixels = 
+getBaseColours pixels =
     let requiredColours = 9
         thresholds = [50, -5 .. 0]
         -- generate 9 colours (8 dominants and a background)
-        all_blocks = map 
+        all_blocks = map
             (\ t -> kmeansGen (thresholdColour t) requiredColours pixels)
             thresholds
         blocks = (filter (\b -> length b >= requiredColours) all_blocks) !! 0
@@ -117,7 +131,7 @@ getBaseColours pixels =
 
 -- group together low values (assuming a dark colour scheme)
 thresholdColour :: Double -> ColourLAB -> ColourLAB
-thresholdColour threshold [l, a, b] = 
+thresholdColour threshold [l, a, b] =
     if l < threshold
         then [-100,0,0]
         else [l,a,b]
