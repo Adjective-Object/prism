@@ -38,8 +38,8 @@ showColoursXResources :: [ColourRGB] -> String
 showColoursXResources colours =
     let colourNamer = 
             (\ index -> "*." ++ case index of 
-                0 -> "background"
-                1 -> "foreground"
+                0 -> "foreground"
+                1 -> "background"
                 _ -> (++) "color" $ show $ index - 2)        
         colourNames = map colourNamer [0..]
     in showSequenceXResources colourNames 0 (map rgbToHexCode colours)

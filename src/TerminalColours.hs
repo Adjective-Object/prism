@@ -82,7 +82,7 @@ findBestBasePallete pal =
 -- returning colours in RGB format
 buildTerminalColoursKMeans :: [ColourRGB] -> [ColourRGB]
 buildTerminalColoursKMeans pixels = 
-    let (bkg:colours_raw) = getBaseColours pixels
+    let (background:colours_raw) = getBaseColours pixels
         colours_matched = findBestBasePallete colours_raw
         min_colour_l = 50
         colours_dark = map (\ [l, a, b] -> 
@@ -95,7 +95,7 @@ buildTerminalColoursKMeans pixels =
         foreground = [max 90 $ maximum 
                         (map (\ [l, _, _] -> l) colours_light), 
                         fa/3, fb/3]
-    in [bkg, foreground] ++ colours_dark ++ colours_light  
+    in [foreground, background] ++ colours_dark ++ colours_light  
 
 averageColour :: [ColourRGB] -> ColourRGB
 averageColour lst = 
