@@ -51,7 +51,7 @@ shiftHues cap (x:xs) =
 --   [a,b,c]
 --   [b,c,a]
 --   [c,a,b]
--- (with appropriate offsets)
+-- (with appropriate offsets to keep the lowest value at 0)
 closestColourset :: Double -> [Hue] -> [Hue] -> Int
 closestColourset cap reference test =
     let makeNext = (\ xs _ -> xs ++ [shiftHues cap $ last xs])

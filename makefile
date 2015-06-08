@@ -1,7 +1,8 @@
 all: prism
 .PHONY: clean
 
-TEST_IMG=images/dock_tiny.jpg
+#TEST_IMG=images/dock_tiny.jpg
+TEST_IMG=images/road.jpg
 BUILD_PATH=dist/build
 
 prism: src/*

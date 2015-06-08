@@ -53,8 +53,8 @@ sampleFromDynamicImage :: DynamicImage -> [ColourRGB]
 sampleFromDynamicImage img = case img of
     (ImageRGB8     i) -> sample i
     (ImageYCbCr8   i) -> sample i
-    where sample img = sampleFromImage img ( ((imageWidth  img) `quot` 20), 
-                                             ((imageHeight img) `quot` 20))
+    where sample img = sampleFromImage img ( ((imageWidth  img) `quot` 30), 
+                                             ((imageHeight img) `quot` 30))
         
             
 
