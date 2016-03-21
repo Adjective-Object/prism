@@ -4,3 +4,4 @@ prism
 prism-prof
 dist/*
 *.prof
+*.jpg
